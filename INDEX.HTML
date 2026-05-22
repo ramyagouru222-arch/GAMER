@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PUPPY GAMER LOGO RS</title>
+
+<style>
+  body { margin:0; overflow:hidden; font-family:Arial; background:#000; color:white; }
+
+  /* START SCREEN */
+  #startScreen{
+    position:absolute;
+    width:100%;
+    height:100%;
+    background:#000;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    z-index:10;
+  }
+
+  input, select{
+    margin:5px;
+    padding:8px;
+    width:220px;
+  }
+
+  button{
+    padding:10px 20px;
+    margin-top:10px;
+    cursor:pointer;
+  }
+
+  /* UI */
+  #ui{
+    position:absolute;
+    top:10px;
+    left:10px;
+    background:rgba(0,0,0,0.6);
+    padding:10px;
+    z-index:2;
+  }
+
+  #deathScreen, #winScreen{
+    position:absolute;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,0.9);
+    display:none;
+    justify-content:center;
+    align-items:center;
+    flex-direction:column;
+    font-size:40px;
+    z-index:5;
+  }
+
+  #winScreen{ color:gold; }
+</style>
+</head>
+
+<body>
+
+<!-- START SCREEN -->
+<div id="startScreen">
+  <h2>WELCOME TO PUPPY GAMER LOGO RS</h2>
+
+  <input id="name" placeholder="Name">
+  <input id="age" type="number" placeholder="Age">
+
+  <select id="gender">
+    <option value="">Gender</option>
+    <option>Male</option>
+    <option>Female</option>
+    <option>Other</option>
+  </select>
+
+  <input id="country" placeholder="Country">
+
+  <p>Do you agree with game rules?</p>
+
+  <select id="agree">
+    <option value="">Select</option>
+    <option value="yes">Yes</option>
+  </select>
+
+  <button onclick="startGame()">Start Game</button>
+</div>
+
+<!-- UI -->
+<div id="ui">
+  ❤️ Health: <span id="health">100</span><br>
+  🪙 Coins: <span id="coins">0</span>/10
+</div>
+
+<div id="deathScreen">💀 You Died <button onclick="restart()">Restart</button></div>
+<div id="winScreen">🎉 YOU WIN <button onclick="restart()">Play Again</button></div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+
+<script>
+
+let scene, camera, renderer;
+let player;
+let coins = [];
+let enemies = [];
+let walls = [];
+
+let health = 100;
+let coinsCollected = 0;
+let dead = false;
+let won = false;
+
+// START GAME
+function startGame(){
+
+  let name = document.getElementById("name").value;
+  let age = document.getElementById("age").value;
+  let gender = document.getElementById("gender").value;
+  let country = document.getElementById("country").value;
+  let agree = document.getElementById("agree").value;
+
+  if(!name || !age || !gender || !country || agree !== "yes"){
+    alert("Fill all fields and agree!");
+    return;
+  }
+
+  document.getElementById("startScreen").style.display = "none";
+
+  init();
+  animate();
+}
+
+// INIT
+function init(){
+
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x111111);
+
+  camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+
+  renderer = new THREE.WebGLRenderer();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
+
+  // player
+  player = new THREE.Mesh(
+    new THREE.BoxGeometry(1,1,1),
+    new THREE.MeshBasicMaterial({ color: 0x00aaff })
+  );
+  player.position.y = 0.5;
+  scene.add(player);
+
+  // ground
+  let ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(100,100),
+    new THREE.MeshBasicMaterial({ color: 0x222222 })
+  );
+  ground.rotation.x = -Math.PI/2;
+  scene.add(ground);
+
+  // walls
+  function wall(x,z,w,h){
+    let m = new THREE.Mesh(
+      new THREE.BoxGeometry(w,2,h),
+      new THREE.MeshBasicMaterial({ color: 0x555555 })
+    );
+    m.position.set(x,1,z);
+    scene.add(m);
+    walls.push(m);
+  }
+
+  wall(0,-25,50,1);
+  wall(0,25,50,1);
+  wall(-25,0,1,50);
+  wall(25,0,1,50);
+
+  // coins (10 FRONT)
+  for(let i=0;i<10;i++){
+    let c = new THREE.Mesh(
+      new THREE.SphereGeometry(0.4,12,12),
+      new THREE.MeshBasicMaterial({ color: 0xffd700 })
+    );
+
+    c.position.x = (Math.random()-0.5)*10;
+    c.position.z = -5 - i*2;
+    c.position.y = 0.5;
+
+    scene.add(c);
+    coins.push(c);
+  }
+
+  // enemies
+  for(let i=0;i<6;i++){
+    let e = new THREE.Mesh(
+      new THREE.BoxGeometry(1,1,1),
+      new THREE.MeshBasicMaterial({ color: 0xff0000 })
+    );
+
+    e.position.x = (Math.random()-0.5)*40;
+    e.position.z = (Math.random()-0.5)*40;
+    e.position.y = 0.5;
+
+    scene.add(e);
+    enemies.push(e);
+  }
+
+  camera.position.set(0,10,10);
+  camera.lookAt(0,0,0);
+}
+
+// controls
+let keys = {};
+document.addEventListener("keydown", e=>keys[e.key]=true);
+document.addEventListener("keyup", e=>keys[e.key]=false);
+
+function dist(a,b){
+  return a.position.distanceTo(b.position);
+}
+
+// restart
+function restart(){
+  location.reload();
+}
+
+// LOOP
+function animate(){
+  requestAnimationFrame(animate);
+
+  if(!dead && !won && player){
+
+    let old = player.position.clone();
+
+    if(keys["ArrowUp"]) player.position.z -= 0.2;
+    if(keys["ArrowDown"]) player.position.z += 0.2;
+    if(keys["ArrowLeft"]) player.position.x -= 0.2;
+    if(keys["ArrowRight"]) player.position.x += 0.2;
+
+    for(let w of walls){
+      if(dist(player,w)<1.3) player.position.copy(old);
+    }
+
+    // coins
+    for(let i=0;i<coins.length;i++){
+      if(dist(player,coins[i])<1){
+        scene.remove(coins[i]);
+        coins.splice(i,1);
+        coinsCollected++;
+      }
+    }
+
+    // WIN
+    if(coins.length === 0 && !won){
+      won = true;
+      document.getElementById("winScreen").style.display="flex";
+    }
+
+    // enemies
+    enemies.forEach(e=>{
+      let dx = player.position.x - e.position.x;
+      let dz = player.position.z - e.position.z;
+      let d = Math.sqrt(dx*dx+dz*dz);
+
+      e.position.x += dx/d*0.04;
+      e.position.z += dz/d*0.04;
+
+      if(d < 1.2){
+        health -= 0.4;
+      }
+    });
+
+    if(health <= 0 && !dead){
+      dead = true;
+      document.getElementById("deathScreen").style.display="flex";
+    }
+
+    document.getElementById("health").innerText=Math.floor(health);
+    document.getElementById("coins").innerText=coinsCollected;
+  }
+
+  renderer.render(scene,camera);
+}
+
+</script>
+
+</body>
+</html>
